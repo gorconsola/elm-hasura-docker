@@ -41,7 +41,7 @@ WORKDIR /home/${USER}
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
 ENV PATH="/home/${USER}/.cargo/bin:${PATH}"
 
-RUN cargo install cargo-pgx --version ${CARGO_PGX_VERSION}
+RUN cargo install cargo-pgx --locked --version ${CARGO_PGX_VERSION}
 RUN cargo pgx init --pg${PG_VERSION}=/usr/lib/postgresql/${PG_VERSION}/bin/pg_config
 
 RUN git clone --branch=${ZDB_BRANCH} --depth=1 https://github.com/zombodb/zombodb.git
