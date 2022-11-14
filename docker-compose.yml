@@ -34,64 +34,35 @@ services:
     depends_on:
       - "hasura"
 
-  hasura:
-    image: graphql-engine:v2.5.0
-    ports:
-      - "8080:8080"
-      - "9695:9695"
-      - "9693:9693"
-    depends_on:
-      - "postgres"
-    volumes:
-      - ./hasura:/hasura
-      - ./hasura/migrations:/hasura-migrations
-      - ./hasura/metadata:/hasura-metadata
+  postgres:
+    image: postgres:12
     restart: always
-    init: true  # to speed up shutting down
+    volumes:
+    - db_data:/var/lib/postgresql/data
     environment:
-      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres
-      # disable the regular console, use the CLI console instead (see Makefile) as it creates migrations
-      HASURA_GRAPHQL_ENABLE_CONSOLE: "false"
-      # enable debugging mode. It is recommended to disable this in production
+      POSTGRES_PASSWORD: postgrespassword
+  hasura:
+    image: hasura/graphql-engine:v2.13.0
+    ports:
+    - "8080:8080"
+    depends_on:
+    - "postgres"
+    restart: always
+    environment:
+      ## postgres database to store Hasura metadata
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/postgres
+      ## this env var can be used to add the above postgres database to Hasura as a data source. this can be removed/updated based on your needs
+      PG_DATABASE_URL: postgres://postgres:postgrespassword@postgres:5432/postgres
+      ## enable the console served by server
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true" # set to "false" to disable console
+      ## enable debugging mode. It is recommended to disable this in production
       HASURA_GRAPHQL_DEV_MODE: "true"
       HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
-      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: "guest"
-      HASURA_GRAPHQL_ADMIN_SECRET: "adminsecret"
-
-  postgres:
-    hostname: postgres
-    build: postgres/.
-    restart: always
-    init: true  # to speed up shutting down
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./postgres/db_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_PASSWORD: postgres
-    depends_on:
-      - "elasticsearch"
-
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.2 # only 7.x is supported by ZomboDB as of apr'22
-    ports: 
-    - "9200:9200"
-    - "9300:9300"
-    volumes:
-      - ./elasticsearch/data:/usr/share/elasticsearch/data
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    cap_add:
-      - IPC_LOCK
+      ## uncomment next line to run console offline (i.e load console assets from server instead of CDN)
+      # HASURA_GRAPHQL_CONSOLE_ASSETS_DIR: /srv/console-assets
+      ## uncomment next line to set an admin secret
+      # HASURA_GRAPHQL_ADMIN_SECRET: myadminsecretkey
 
 volumes:
+  db_data:
   node_modules_volume:
